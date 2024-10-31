@@ -1,0 +1,118 @@
+import tkinter as tk
+from tkinter import messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import eco # type: ignore
+from Econ import calculate_simple_interest, calculate_compound_interest, adjust_for_inflation, depreciated_value_due_to_inflation # type: ignore
+
+def on_calculate():
+    try:
+        start_year = int(start_year_entry.get())
+        end_year = int(end_year_entry.get())
+        principal_amt = float(principal_amt_entry.get())
+        rate = float(rate_entry.get())
+        years = end_year - start_year
+        number = Inflation.get()
+        simple_interest = calculate_simple_interest(principal_amt, years, rate)
+        times_compounded = 2
+        compound_interest = calculate_compound_interest(principal_amt, rate / 100, times_compounded, years)
+
+        
+        investment_values = {}
+        inflation_values = {}
+
+        for investment_type in investment_type_options:
+            if investment_type == 'Crypto' and start_year < 2011:
+                continue  # Skip adding 'Crypto' to the graph if the start year is before 2011
+
+            total_return = eco.get_investment_return(start_year, end_year, investment_type, csv_file_path)
+            final_investment_value = eco.calculate_final_investment_value(principal_amt, total_return)
+            Inflation_value = depreciated_value_due_to_inflation(start_year, end_year, final_investment_value, 'merica.csv')
+            inflation_values[investment_type]= Inflation_value
+            investment_values[investment_type] = final_investment_value
+        inflation_values['Simple Interest'] = principal_amt + simple_interest
+        inflation_values['Compound Interest'] = compound_interest 
+
+        investment_values['Simple Interest'] = principal_amt + simple_interest
+        investment_values['Compound Interest'] = compound_interest 
+        if Inflation.get() == "2":
+            for key, value in investment_values.items():
+                inflation_adjusted_value = depreciated_value_due_to_inflation(start_year, end_year, value, 'merica.csv')
+                inflation_values[key] = inflation_adjusted_value
+
+            display_graph(inflation_values)
+        else:
+            display_graph(investment_values)
+
+    except ValueError as e:
+        messagebox.showerror("Error", "Please enter valid numbers.")
+        
+def display_graph(investment_values):
+    fig, ax = plt.subplots(figsize=(10, 6))  
+    investment_types = list(investment_values.keys())
+    values = list(investment_values.values())
+    bars = ax.bar(investment_types, values)
+
+    ax.set_ylabel('Value')
+    ax.set_title('Investment and Interest Comparison')
+    plt.xticks(rotation=45, ha='right')  
+
+    for bar in bars:
+        yval = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2, yval, round(yval, 2), 
+                verticalalignment='bottom', ha='center')
+
+    plt.subplots_adjust(bottom=0.15)  
+    plt.tight_layout()  
+    graph_window = tk.Toplevel(root)
+    graph_window.title("Investment Graph")
+    canvas = FigureCanvasTkAgg(fig, master=graph_window)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack()
+
+
+root = tk.Tk()
+root.title("Economic and Investment Calculations")
+
+tk.Label(root, text="Start Year:").pack()
+start_year_entry = tk.Entry(root)
+start_year_entry.pack()
+
+tk.Label(root, text="End Year:").pack()
+end_year_entry = tk.Entry(root)
+end_year_entry.pack()
+
+tk.Label(root, text="Principal Amount ($):").pack()
+principal_amt_entry = tk.Entry(root)
+principal_amt_entry.pack()
+
+tk.Label(root, text="Annual Interest Rate (%):").pack()
+rate_entry = tk.Entry(root)
+rate_entry.pack()
+
+tk.Label(root, text="Infaltion adjusted graph if 2:").pack()
+Inflation = tk.Entry(root)
+Inflation.pack()
+
+investment_type_var = tk.StringVar(root)
+investment_type_var.set("S&P 500 (includes dividends)")
+investment_type_options = [
+    'S&P 500 (includes dividends)',
+    '3-month T.Bill',
+    'US T. Bond',
+    'Baa Corporate Bond',
+    'Real Estate',
+    'Gold',
+    'Crypto'
+]
+tk.Label(root, text="Investment Type:").pack()
+tk.OptionMenu(root, investment_type_var, *investment_type_options).pack()
+
+csv_file_path = "S&P 500.csv"  
+
+submit_button = tk.Button(root, text="Calculate", command=on_calculate)
+submit_button.pack()
+
+root.mainloop()
+
+root.mainloop()
